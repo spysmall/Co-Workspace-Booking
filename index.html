@@ -739,7 +739,7 @@ async function apiCreateBooking(booking) {
     localStorage.setItem('cwBookings_v2', JSON.stringify(bookingsCache));
     return { ok: true, booking: saved };
   }
-  return { ok: false };
+  return { ok: false, error: json.error, message: json.message };
 }
 
 async function apiCancelBooking(id) {
@@ -1632,7 +1632,7 @@ function selectCalDate(dateStr) {
     initFormSlotButtons();
   }
   
-  qbData = { name: '', team: '', slot: null, branchId: null, date: dateStr };
+  qbData = { name: '', team: '', email: '', slot: null, branchId: null, date: dateStr };
   qbSelectedBranchId = null;
   qbSelectedSlot = null;
   qbCurrentZone = null;
@@ -1679,17 +1679,17 @@ function qbRenderStep() {
       <div class="space-y-4">
         <div>
           <label class="block text-xs font-bold text-trip-textMuted mb-1.5 uppercase tracking-wider">ชื่อเล่น <span class="text-trip-orange">*</span></label>
-          <input type="text" id="qb-name" value="${qbData.name}" placeholder="ระบุชื่อเรียก"
+          <input type="text" id="qb-name" value="${qbData.name || ''}" placeholder="ระบุชื่อเรียก"
             class="w-full border border-trip-border rounded-xl px-4 py-3 text-sm font-semibold focus:border-trip-blue transition-colors bg-trip-grayBg focus:bg-white" />
         </div>
         <div>
           <label class="block text-xs font-bold text-trip-textMuted mb-1.5 uppercase tracking-wider">ทีม / แผนก <span class="text-trip-orange">*</span></label>
-          <input type="text" id="qb-team" value="${qbData.team}" placeholder="เช่น Corp Service"
+          <input type="text" id="qb-team" value="${qbData.team || ''}" placeholder="เช่น Corp Service"
             class="w-full border border-trip-border rounded-xl px-4 py-3 text-sm font-semibold focus:border-trip-blue transition-colors bg-trip-grayBg focus:bg-white" />
         </div>
         <div>
           <label class="block text-xs font-bold text-trip-textMuted mb-1.5 uppercase tracking-wider">อีเมล <span class="text-trip-orange">*</span></label>
-          <input type="email" id="qb-email" value="${qbData.email}" placeholder="your@email.com"
+          <input type="email" id="qb-email" value="${qbData.email || ''}" placeholder="your@email.com"
             class="w-full border border-trip-border rounded-xl px-4 py-3 text-sm font-semibold focus:border-trip-blue transition-colors bg-trip-grayBg focus:bg-white" />
         </div>
       </div>`;
