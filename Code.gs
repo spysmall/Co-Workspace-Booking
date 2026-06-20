@@ -7,7 +7,7 @@ const SHEET_NAME = 'Bookings';
 const BRANCH_SHEET_NAME = 'Branches';
 const HEADERS = [
   'id', 'name', 'team', 'email', 'date', 'endDate', 'slot', 'slotLabel',
-  'branch', 'branchId', 'user', 'password', 'status', 'timestamp', 'sendmail', 'cancelRequest'
+  'branch', 'branchId', 'acno', 'status', 'timestamp', 'sendmail', 'cancelRequest'
 ];
 const BRANCH_HEADERS = ['id', 'name', 'zone', 'address', 'travel', 'maps'];
 
@@ -112,10 +112,8 @@ function sendBookingEmail(booking) {
       ? `<tr><td colspan="2" style="padding:16px;background:#FFF4E6;border-radius:8px;text-align:center;color:#D96500;font-size:13px;font-weight:600;">
            บัญชีเข้าใช้งานจะถูกปลดล็อคเมื่อได้รับการเลื่อนขั้นสิทธิ์เป็นคิวจริงค่ะ
          </td></tr>`
-      : `<tr><td style="padding:8px 12px;color:#555;font-size:13px;width:120px;">Username</td>
-           <td style="padding:8px 12px;font-weight:700;font-size:14px;font-family:monospace;">${booking.user || '-'}</td></tr>
-         <tr><td style="padding:8px 12px;color:#555;font-size:13px;">Password</td>
-           <td style="padding:8px 12px;font-weight:700;font-size:14px;font-family:monospace;">${booking.password || '-'}</td></tr>`;
+      : `<tr><td style="padding:8px 12px;color:#555;font-size:13px;width:120px;">A/C No.</td>
+           <td style="padding:8px 12px;font-weight:700;font-size:14px;font-family:monospace;">${booking.acno || '-'}</td></tr>`;
 
     const daysRow = days > 1
       ? `<tr><td style="padding:8px 12px;color:#555;font-size:13px;">จำนวนวัน</td>
@@ -259,10 +257,13 @@ function doPost(e) {
 function getNextCoPassCredential() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const coPassSheet = ss.getSheetByName('Co-pass');
-  if (!coPassSheet) return { id: '', password: '' };
+  if (!coPassSheet) return { acno: '' };
 
-  const coPassRows = coPassSheet.getDataRange().getValues().slice(1); // skip header
-  if (!coPassRows.length) return { id: '', password: '' };
+  const coPassData = coPassSheet.getDataRange().getValues();
+  const coPassHeaders = coPassData[0];
+  const acnoCol = coPassHeaders.indexOf('acno');
+  const coPassRows = coPassData.slice(1);
+  if (!coPassRows.length) return { acno: '' };
 
   // Count total confirmed bookings already saved to determine next index
   const bookingSheet = getSheet();
@@ -272,19 +273,54 @@ function getNextCoPassCredential() {
   const confirmedCount = bookingData.slice(1).filter(r => r[statusCol] === 'confirmed').length;
 
   const index = confirmedCount % coPassRows.length;
-  return { id: coPassRows[index][0], password: coPassRows[index][1] };
+  return { acno: coPassRows[index][acnoCol >= 0 ? acnoCol : 0] };
 }
 
 function createBooking(booking) {
   const sheet = getSheet();
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
-  // Assign Co-pass credentials for confirmed bookings
+  // ── Server-side duplicate/overlap check ──────────────────
+  const existing = sheet.getDataRange().getValues().slice(1);
+  const nameCol   = headers.indexOf('name');
+  const dateCol   = headers.indexOf('date');
+  const endDateCol = headers.indexOf('endDate');
+  const slotCol   = headers.indexOf('slot');
+  const statusCol = headers.indexOf('status');
+  const cancelCol = headers.indexOf('cancelRequest');
+
+  const newStart = booking.date;
+  const newEnd   = booking.endDate || booking.date;
+  const newSlot  = booking.slot;
+  const newName  = (booking.name || '').trim().toLowerCase();
+
+  for (const row of existing) {
+    const rowStatus = row[statusCol];
+    const rowCancel = cancelCol >= 0 ? row[cancelCol] : '';
+    if (rowStatus === 'cancelled' || rowCancel === 'Confirm') continue;
+
+    const rowName  = (row[nameCol] || '').toString().trim().toLowerCase();
+    if (rowName !== newName) continue;
+
+    const rowStart = row[dateCol] ? String(row[dateCol]).substring(0, 10) : '';
+    const rowEnd   = (endDateCol >= 0 && row[endDateCol]) ? String(row[endDateCol]).substring(0, 10) : rowStart;
+    const rowSlot  = row[slotCol];
+
+    // Date ranges overlap and slot matches (fullday overlaps any slot)
+    const datesOverlap = newStart <= rowEnd && newEnd >= rowStart;
+    const slotsConflict = rowSlot === newSlot || rowSlot === 'fullday' || newSlot === 'fullday';
+
+    if (datesOverlap && slotsConflict) {
+      return { ok: false, error: 'duplicate', message: `"${booking.name}" มีการจองช่วงเวลานี้อยู่แล้วค่ะ` };
+    }
+  }
+  // ─────────────────────────────────────────────────────────
+
+  // Assign Co-pass A/C No. for confirmed bookings
   let finalBooking = { ...booking };
   if (booking.status === 'confirmed') {
     const cred = getNextCoPassCredential();
-    finalBooking.user = cred.id;
-    finalBooking.password = cred.password;
+    finalBooking.acno = cred.acno;
   }
 
   const row = headers.map(h => finalBooking[h] ?? '');
@@ -363,13 +399,41 @@ function migrateBookingSheet() {
   return { ok: true, columns: HEADERS, rows: newRows.length };
 }
 
+// Deletes the 'id' column from the Co-pass sheet — run once from the Apps Script editor
+function deleteCoPassIdColumn() {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName('Co-pass');
+  if (!sheet) return { ok: false, error: 'Co-pass sheet not found' };
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const colIndex = headers.indexOf('id'); // 0-based
+  if (colIndex === -1) return { ok: false, error: "'id' column not found" };
+
+  sheet.deleteColumn(colIndex + 1); // deleteColumn is 1-based
+  return { ok: true, message: "'id' column deleted from Co-pass" };
+}
+
+// Deletes the 'user' column from the Bookings sheet — run once from the Apps Script editor
+function deleteUserColumn() {
+  const ss    = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return { ok: false, error: 'Bookings sheet not found' };
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const colIndex = headers.indexOf('user'); // 0-based
+  if (colIndex === -1) return { ok: false, error: "'user' column not found" };
+
+  sheet.deleteColumn(colIndex + 1); // deleteColumn is 1-based
+  return { ok: true, message: "'user' column deleted" };
+}
+
 function seedCoPass() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   let sheet = ss.getSheetByName('Co-pass');
   if (sheet) sheet.clearContents();
   else sheet = ss.insertSheet('Co-pass');
 
-  const headers = ['id', 'password'];
+  const headers = ['acno'];
   sheet.appendRow(headers);
   sheet.getRange(1, 1, 1, headers.length)
     .setFontWeight('bold')
@@ -378,23 +442,23 @@ function seedCoPass() {
   sheet.setFrozenRows(1);
 
   const data = [
-    ['User001', 'CW@Pass001'],
-    ['User002', 'CW@Pass002'],
-    ['User003', 'CW@Pass003'],
-    ['User004', 'CW@Pass004'],
-    ['User005', 'CW@Pass005'],
-    ['User006', 'CW@Pass006'],
-    ['User007', 'CW@Pass007'],
-    ['User008', 'CW@Pass008'],
-    ['User009', 'CW@Pass009'],
-    ['User010', 'CW@Pass010'],
-    ['User011', 'CW@Pass011'],
-    ['User012', 'CW@Pass012'],
-    ['User013', 'CW@Pass013'],
-    ['User014', 'CW@Pass014'],
-    ['User015', 'CW@Pass015'],
+    ['CW@Pass001'],
+    ['CW@Pass002'],
+    ['CW@Pass003'],
+    ['CW@Pass004'],
+    ['CW@Pass005'],
+    ['CW@Pass006'],
+    ['CW@Pass007'],
+    ['CW@Pass008'],
+    ['CW@Pass009'],
+    ['CW@Pass010'],
+    ['CW@Pass011'],
+    ['CW@Pass012'],
+    ['CW@Pass013'],
+    ['CW@Pass014'],
+    ['CW@Pass015'],
   ];
-  sheet.getRange(2, 1, data.length, 2).setValues(data);
+  sheet.getRange(2, 1, data.length, 1).setValues(data);
 
   return { ok: true, rows: data.length };
 }
