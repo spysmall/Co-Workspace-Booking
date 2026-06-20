@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-trip-blue: #0066FF;
+  --color-trip-lightBlue: #E6F0FF;
+  --color-trip-darkBlue: #0F2942;
+  --color-trip-orange: #FF5B00;
+  --color-trip-orangeHover: #E05200;
+  --color-trip-grayBg: #F5F7FA;
+  --color-trip-border: #EAEFF3;
+  --color-trip-textDark: #1E293B;
+  --color-trip-textMuted: #64748B;
+}
