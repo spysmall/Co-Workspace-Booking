@@ -411,13 +411,13 @@
 <!-- Booking Ticket Success Modal -->
 <div id="modal-success" class="modal-overlay hidden">
   <div class="modal-box max-w-md p-0" style="max-height:90vh;display:flex;flex-direction:column">
-    <div class="flex flex-col items-center gap-2 pt-6 px-5 pb-5 mb-2 shrink-0">
+    <div class="flex flex-col items-center gap-2 pt-6 pb-5 mb-2 shrink-0">
       <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center shrink-0">
         <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
       </div>
       <h2 id="modal-success-title" class="text-lg font-black text-trip-textDark leading-tight">ทำรายการสำเร็จเรียบร้อย</h2>
     </div>
-    <div class="overflow-y-auto px-5 flex-1 min-h-0">
+    <div class="overflow-y-auto flex-1 min-h-0">
       <div id="ticket-content" class="ticket-gradient rounded-2xl shadow-lg p-4 text-white mb-3 relative overflow-hidden border border-blue-900/50">
         <!-- Background decorators -->
         <div class="absolute -top-10 -right-10 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl pointer-events-none"></div>
@@ -425,7 +425,7 @@
       </div>
       <div id="ticket-warning"></div>
     </div>
-    <div class="px-5 pb-5 pt-3 shrink-0">
+    <div class="pb-5 pt-3 shrink-0">
       <button onclick="closeModal('modal-success')"
         class="w-full bg-trip-orange text-white font-extrabold py-2.5 rounded-xl hover:bg-trip-orangeHover transition-all shadow-md">
         รับทราบ
@@ -1201,14 +1201,14 @@ function showTicket(booking) {
         <div class="text-[11px] text-white/60 mt-1">บัญชีเข้าใช้งานจะแจ้งเมื่อได้รับการยืนยันสิทธิ์</div>
        </div>`
     : `<div class="rounded-xl mt-3 overflow-hidden" style="background:rgba(0,0,0,0.2)">
-        <div class="flex items-center justify-between px-3 py-2">
-          <span class="text-[13px] text-white/50 font-medium">A/C No.</span>
-          <div class="flex items-center gap-2">
-            <span class="text-[15px] font-bold font-mono text-white tracking-widest">${booking.acno}</span>
-            <button onclick="copyToClipboard('${booking.acno}', this)" class="copy-btn flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-white/60 hover:text-white hover:bg-white/15 transition-all" style="border:1px solid rgba(255,255,255,0.15)">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-            </button>
+        <div class="flex items-center justify-between px-3 py-2.5">
+          <div>
+            <div class="text-[11px] text-white/40 mb-0.5">A/C No.</div>
+            <div class="text-[15px] font-bold font-mono text-white tracking-widest">${booking.acno}</div>
           </div>
+          <button onclick="copyToClipboard('${booking.acno}', this)" class="copy-btn flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-bold text-white/60 hover:text-white hover:bg-white/15 transition-all shrink-0" style="border:1px solid rgba(255,255,255,0.15)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          </button>
         </div>
        </div>`;
 
@@ -1238,19 +1238,19 @@ function showTicket(booking) {
 
   const html = `
     <div class="relative z-10">
-      <div class="flex justify-between items-center mb-3">
+      <div class="flex justify-between items-center mb-4">
         <div>
-          <div class="text-[11px] text-white/40 uppercase tracking-widest mb-0.5">Booking Ref</div>
-          <div class="text-sm font-mono text-white/70">${booking.id}</div>
+          <div class="text-[10px] text-white/40 uppercase tracking-widest mb-0.5">Booking Ref</div>
+          <div class="text-xs font-mono text-white/60">${booking.id}</div>
         </div>
         ${statusBadge}
       </div>
 
       <div class="rounded-xl overflow-hidden mb-3" style="background:rgba(0,0,0,0.2)">
         ${rows.map(([label, val], i) => `
-          <div class="flex justify-between items-center px-3 py-2 text-sm${i < rows.length - 1 ? ' border-b' : ''}" style="${i < rows.length - 1 ? 'border-color:rgba(255,255,255,0.07)' : ''}">
-            <span class="text-white/50 shrink-0 mr-3">${label}</span>
-            <span class="font-semibold text-white text-right leading-snug">${val}</span>
+          <div class="px-3 py-2.5${i < rows.length - 1 ? ' border-b' : ''}" style="${i < rows.length - 1 ? 'border-color:rgba(255,255,255,0.07)' : ''}">
+            <div class="text-[11px] text-white/40 mb-0.5">${label}</div>
+            <div class="text-sm font-semibold text-white leading-snug">${val}</div>
           </div>`).join('')}
       </div>
 
